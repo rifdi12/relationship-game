@@ -1,0 +1,20 @@
+{
+  "name": "game-party",
+  "version": "1.0.0",
+  "description": "Hub game multiplayer buat pasangan - quiz, would you rather, truth or dare, connect 4, tebak kata, tebak gambar, jinakkan bom, plus voice call.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  }
+}

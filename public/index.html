@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Game Party — Main Berdua</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- LAYAR: HOME (hub pemilihan game) -->
+  <section id="screen-home" class="screen active">
+    <div class="card wide">
+      <h1>🎮 Game Party</h1>
+      <p class="subtitle">Main berdua, pilih game favorit kalian!</p>
+
+      <label class="field">
+        <span>Nama kamu</span>
+        <input id="input-name" type="text" maxlength="20" placeholder="Masukkan nama..." />
+      </label>
+
+      <h3>Pilih Game</h3>
+      <div id="game-grid" class="game-grid"></div>
+
+      <button id="btn-create" class="btn btn-primary btn-large">Buat Room Baru</button>
+
+      <div class="divider">atau gabung room yang sudah ada</div>
+
+      <label class="field">
+        <span>Kode Room</span>
+        <input id="input-code" type="text" maxlength="4" placeholder="Contoh: AB3D" style="text-transform:uppercase" />
+      </label>
+      <button id="btn-join" class="btn btn-secondary">Gabung Room</button>
+
+      <p id="home-error" class="error-text"></p>
+    </div>
+  </section>
+
+  <!-- LAYAR: LOBBY (generic, tiap room selalu 2 pemain) -->
+  <section id="screen-lobby" class="screen">
+    <div class="card wide">
+      <div class="room-code-badge">
+        Kode Room: <span id="lobby-code">----</span>
+      </div>
+
+      <h2>Menunggu Pemain</h2>
+
+      <div class="lobby-grid">
+        <div class="lobby-col">
+          <h3>Pemain (<span id="player-count">0</span>/2)</h3>
+          <ul id="player-list" class="player-list"></ul>
+        </div>
+
+        <div class="lobby-col">
+          <div id="generic-lobby-note" class="lobby-extra">
+            <p class="muted">Begitu berdua siap, klik "Mulai Game".</p>
+          </div>
+
+          <!-- QUIZ: form tulis soal -->
+          <div id="quiz-lobby-extra" class="lobby-extra" hidden>
+            <h3>Tulis Soalmu</h3>
+            <form id="quiz-form-question" class="question-form">
+              <input id="quiz-q-text" type="text" maxlength="200" placeholder="Tulis pertanyaan..." required />
+              <input id="quiz-q-opt0" type="text" maxlength="80" placeholder="Pilihan A" required />
+              <input id="quiz-q-opt1" type="text" maxlength="80" placeholder="Pilihan B" required />
+              <input id="quiz-q-opt2" type="text" maxlength="80" placeholder="Pilihan C" required />
+              <input id="quiz-q-opt3" type="text" maxlength="80" placeholder="Pilihan D" required />
+              <label class="field">
+                <span>Jawaban Benar</span>
+                <select id="quiz-q-correct">
+                  <option value="0">Pilihan A</option>
+                  <option value="1">Pilihan B</option>
+                  <option value="2">Pilihan C</option>
+                  <option value="3">Pilihan D</option>
+                </select>
+              </label>
+              <button type="submit" class="btn btn-primary">Tambah Soal</button>
+            </form>
+            <p class="muted">Soal terkumpul: <span id="quiz-question-count">0</span></p>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-start" class="btn btn-primary btn-large">Mulai Game</button>
+      <p class="muted">Room terkunci untuk 2 pemain.</p>
+    </div>
+  </section>
+
+  <!-- QUIZ PARTY: layar-layar khusus -->
+  <section id="screen-quiz-question" class="screen">
+    <div class="card wide">
+      <div class="question-header">
+        <span id="quiz-q-progress">Soal 1/5</span>
+        <span id="quiz-q-timer" class="timer">15</span>
+      </div>
+      <p class="q-author">Dari: <b id="quiz-q-author-name">???</b></p>
+      <h2 id="quiz-q-text-display">Pertanyaan...</h2>
+      <div id="quiz-answer-grid" class="answer-grid">
+        <button class="answer-btn opt-0" data-idx="0"></button>
+        <button class="answer-btn opt-1" data-idx="1"></button>
+        <button class="answer-btn opt-2" data-idx="2"></button>
+        <button class="answer-btn opt-3" data-idx="3"></button>
+      </div>
+      <p id="quiz-answer-status" class="muted"></p>
+      <p id="quiz-author-wait-note" class="muted" style="display:none">Ini soalmu sendiri — kamu tidak ikut menjawab. Menunggu pemain lain...</p>
+    </div>
+  </section>
+
+  <section id="screen-quiz-reveal" class="screen">
+    <div class="card wide">
+      <h2>Jawaban Benar</h2>
+      <p id="quiz-reveal-question" class="reveal-question"></p>
+      <div id="quiz-reveal-options" class="answer-grid"></div>
+      <h3>Papan Skor</h3>
+      <ul id="quiz-reveal-scoreboard" class="player-list"></ul>
+    </div>
+  </section>
+
+  <section id="screen-quiz-over" class="screen">
+    <div class="card wide">
+      <h1>🏆 Hasil Akhir</h1>
+      <ul id="quiz-final-scoreboard" class="player-list large"></ul>
+      <button id="quiz-btn-play-again" class="btn btn-primary btn-large">Main Lagi</button>
+    </div>
+  </section>
+
+  <!-- WOULD YOU RATHER: layar main -->
+  <section id="screen-wyr-play" class="screen">
+    <div class="card wide">
+      <div class="question-header">
+        <span id="wyr-round-progress">Ronde 1</span>
+        <span id="wyr-match-count" class="muted">Cocok: 0x</span>
+      </div>
+      <h2>Would You Rather...?</h2>
+      <div class="answer-grid">
+        <button class="answer-btn opt-0" id="wyr-btn-a" data-choice="a"></button>
+        <button class="answer-btn opt-1" id="wyr-btn-b" data-choice="b"></button>
+      </div>
+      <p id="wyr-status" class="muted"></p>
+      <div id="wyr-reveal-box" class="reveal-box" hidden>
+        <p id="wyr-reveal-text" class="reveal-question"></p>
+        <button id="wyr-btn-next" class="btn btn-primary btn-large">Ronde Berikutnya</button>
+      </div>
+      <button id="wyr-btn-back" class="btn btn-secondary">Kembali ke Lobby</button>
+    </div>
+  </section>
+
+  <!-- TRUTH OR DARE: layar main -->
+  <section id="screen-tod-play" class="screen">
+    <div class="card wide">
+      <div class="question-header">
+        <span id="tod-round-progress">Ronde 1</span>
+      </div>
+      <h2 id="tod-turn-heading">Giliran ...</h2>
+
+      <p id="tod-waiting-note" class="muted" hidden>Menunggu pasangan pilih...</p>
+      <div id="tod-choose-buttons" class="answer-grid" hidden>
+        <button id="tod-btn-truth" class="answer-btn opt-1">🗣️ Truth</button>
+        <button id="tod-btn-dare" class="answer-btn opt-0">🔥 Dare</button>
+      </div>
+
+      <div id="tod-card-box" class="reveal-box" hidden>
+        <p id="tod-card-type" class="muted"></p>
+        <p id="tod-card-text" class="reveal-question"></p>
+        <button id="tod-btn-done" class="btn btn-primary btn-large">Selesai, Lanjut</button>
+      </div>
+
+      <button id="tod-btn-back" class="btn btn-secondary">Kembali ke Lobby</button>
+    </div>
+  </section>
+
+  <!-- CONNECT 4: layar main -->
+  <section id="screen-c4-play" class="screen">
+    <div class="card wide">
+      <div class="question-header">
+        <span id="c4-status">Giliran Merah</span>
+        <span id="c4-score" class="muted">🔴 0 · 🟡 0 · Seri 0</span>
+      </div>
+      <div id="c4-board" class="c4-board"></div>
+      <div id="c4-winner-box" class="reveal-box" hidden>
+        <p id="c4-winner-text" class="reveal-question"></p>
+        <button id="c4-btn-next" class="btn btn-primary btn-large">Ronde Berikutnya</button>
+      </div>
+      <button id="c4-btn-back" class="btn btn-secondary">Kembali ke Lobby</button>
+    </div>
+  </section>
+
+  <!-- TEBAK KATA: layar main -->
+  <section id="screen-guessword-play" class="screen">
+    <div class="card wide">
+      <div class="question-header">
+        <span id="gw-round-label">Ronde 1/2</span>
+        <span id="gw-role-label" class="muted">Kamu: Penebak</span>
+      </div>
+
+      <div id="gw-setting-box" hidden>
+        <div id="gw-setter-form-box">
+          <h3>Kamu jadi Pembuat Kata</h3>
+          <p class="muted">Pilih kata rahasia (3-10 huruf) buat ditebak pasanganmu.</p>
+          <form id="gw-form-word" class="question-form">
+            <input id="gw-word-input" type="text" maxlength="10" placeholder="Kata rahasia..." required />
+            <button type="submit" class="btn btn-primary">Set Kata</button>
+          </form>
+        </div>
+        <p id="gw-setting-wait-note" class="muted" hidden>Menunggu pasangan bikin kata rahasia...</p>
+      </div>
+
+      <div id="gw-guessing-box" hidden>
+        <p id="gw-guesser-note" class="muted"></p>
+        <div id="gw-guess-history" class="gw-history"></div>
+        <form id="gw-form-guess" class="question-form" hidden>
+          <input id="gw-guess-input" type="text" placeholder="Tebakanmu..." required />
+          <button type="submit" class="btn btn-primary">Tebak</button>
+        </form>
+        <p id="gw-attempts-left" class="muted"></p>
+      </div>
+
+      <div id="gw-over-box" class="reveal-box" hidden>
+        <p id="gw-over-text" class="reveal-question"></p>
+        <p id="gw-score-text" class="muted"></p>
+        <button id="gw-btn-next" class="btn btn-primary btn-large">Ronde Berikutnya</button>
+      </div>
+
+      <button id="gw-btn-back" class="btn btn-secondary">Kembali ke Lobby</button>
+    </div>
+  </section>
+
+  <!-- TEBAK GAMBAR: layar main -->
+  <section id="screen-pictionary-play" class="screen">
+    <div class="card wide">
+      <div class="question-header">
+        <span id="pic-role-label">Kamu: Penggambar</span>
+        <span id="pic-timer" class="timer">60</span>
+      </div>
+      <p id="pic-word-hint" class="q-author"></p>
+      <canvas id="pic-canvas" class="pic-canvas" width="600" height="400"></canvas>
+      <div id="pic-drawer-tools" hidden>
+        <button id="pic-btn-clear" class="btn btn-secondary">Hapus Gambar</button>
+      </div>
+      <form id="pic-form-guess" class="question-form" hidden>
+        <input id="pic-guess-input" type="text" placeholder="Tebak gambar ini..." autocomplete="off" />
+        <button type="submit" class="btn btn-primary">Tebak</button>
+      </form>
+      <div id="pic-guess-feed" class="pic-feed"></div>
+
+      <div id="pic-over-box" class="reveal-box" hidden>
+        <p id="pic-over-text" class="reveal-question"></p>
+        <p id="pic-score-text" class="muted"></p>
+        <button id="pic-btn-next" class="btn btn-primary btn-large">Ronde Berikutnya</button>
+      </div>
+
+      <button id="pic-btn-back" class="btn btn-secondary">Kembali ke Lobby</button>
+    </div>
+  </section>
+
+  <!-- JINAKKAN BOM: layar main (co-op, 2 sub-view Defuser/Expert) -->
+  <section id="screen-bomb-play" class="screen">
+    <div class="card wide">
+      <div class="question-header">
+        <span id="bomb-role-label">Kamu: Defuser</span>
+        <span id="bomb-timer" class="timer">04:00</span>
+      </div>
+      <p class="muted">💥 Strike: <span id="bomb-strikes">0</span>/3</p>
+
+      <!-- DEFUSER VIEW -->
+      <div id="bomb-defuser-view" hidden>
+        <div class="bomb-module">
+          <h3>🔌 Modul Kabel</h3>
+          <div id="bomb-wires-row" class="bomb-wires-row"></div>
+        </div>
+        <div class="bomb-module">
+          <h3>✨ Modul Simbol</h3>
+          <div id="bomb-symbols-row" class="bomb-symbols-row"></div>
+        </div>
+        <div class="bomb-module">
+          <h3>🎵 Modul Urutan Warna</h3>
+          <p class="muted">Sebutin urutan ini ke pasanganmu:</p>
+          <div id="bomb-simon-sequence" class="bomb-simon-sequence"></div>
+          <p class="muted">Pencet sesuai instruksi pasanganmu:</p>
+          <div class="bomb-simon-buttons">
+            <button type="button" class="bomb-simon-btn bomb-color-red" data-color="red">Merah</button>
+            <button type="button" class="bomb-simon-btn bomb-color-blue" data-color="blue">Biru</button>
+            <button type="button" class="bomb-simon-btn bomb-color-yellow" data-color="yellow">Kuning</button>
+            <button type="button" class="bomb-simon-btn bomb-color-green" data-color="green">Hijau</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPERT VIEW: manual statis, sama tiap game -->
+      <div id="bomb-expert-view" hidden>
+        <div class="bomb-manual">
+          <h3>🔌 Modul Kabel <span id="bomb-check-wires" class="bomb-check" hidden>✅</span></h3>
+          <p class="muted">
+            Tanya Defuser ada berapa kabel MERAH:<br />
+            • 0 merah → potong kabel ke-2<br />
+            • Tepat 1 merah → potong kabel TERAKHIR<br />
+            • &gt;1 merah → potong kabel pertama SETELAH kabel merah terakhir (kalau merah terakhir di ujung, potong kabel PERTAMA)
+          </p>
+        </div>
+        <div class="bomb-manual">
+          <h3>✨ Modul Simbol <span id="bomb-check-symbols" class="bomb-check" hidden>✅</span></h3>
+          <p class="muted">Defuser bakal sebutin 4 simbol. Cari grup yang berisi SEMUA 4 simbol itu, suruh dia pencet sesuai urutan grup ini (kiri ke kanan, lewatin yang gak disebut):</p>
+          <p class="bomb-symbol-group">Grup A: ★ ♦ ● ▲</p>
+          <p class="bomb-symbol-group">Grup B: ✚ ◆ ♥ ■ ☾</p>
+          <p class="bomb-symbol-group">Grup C: ◉ ☘ ✦ ◈ ♧ ☂</p>
+        </div>
+        <div class="bomb-manual">
+          <h3>🎵 Modul Urutan Warna <span id="bomb-check-simon" class="bomb-check" hidden>✅</span></h3>
+          <p class="muted">Defuser bakal sebutin urutan warna. Translate tiap warna pakai tabel ini, suruh dia pencet hasilnya berurutan:</p>
+          <p class="bomb-simon-map">Merah → Biru<br />Biru → Kuning<br />Kuning → Hijau<br />Hijau → Merah</p>
+        </div>
+      </div>
+
+      <div id="bomb-over-box" class="reveal-box" hidden>
+        <p id="bomb-over-text" class="reveal-question"></p>
+        <button id="bomb-btn-again" class="btn btn-primary btn-large">Main Lagi</button>
+      </div>
+
+      <button id="bomb-btn-back" class="btn btn-secondary">Kembali ke Lobby</button>
+    </div>
+  </section>
+
+  <!-- VOICE CALL WIDGET: persist di semua layar selama di room -->
+  <div id="call-widget" class="call-widget" hidden>
+    <div id="call-idle" class="call-state">
+      <button id="call-btn-start" class="call-pill call-pill-start" title="Mulai Panggilan">
+        <span class="call-icon">📞</span>
+        <span class="call-label">Telepon</span>
+      </button>
+    </div>
+
+    <div id="call-outgoing" class="call-state" hidden>
+      <div class="call-pill call-pill-info">
+        <span class="call-icon call-pulse">📞</span>
+        <span class="call-label">Menghubungi...</span>
+        <button id="call-btn-cancel" class="call-icon-btn" title="Batalkan">✕</button>
+      </div>
+    </div>
+
+    <div id="call-incoming" class="call-state" hidden>
+      <div class="call-pill call-pill-incoming">
+        <span class="call-icon call-pulse">📞</span>
+        <span id="call-incoming-name" class="call-label">... menelepon</span>
+        <button id="call-btn-accept" class="call-icon-btn call-icon-btn-accept" title="Terima">✓</button>
+        <button id="call-btn-reject" class="call-icon-btn call-icon-btn-reject" title="Tolak">✕</button>
+      </div>
+    </div>
+
+    <div id="call-active" class="call-state" hidden>
+      <div class="call-pill call-pill-active">
+        <span class="call-icon">🎙️</span>
+        <span id="call-timer" class="call-label">00:00</span>
+        <button id="call-btn-mute" class="call-icon-btn" title="Matikan mic">🎙️</button>
+        <button id="call-btn-hangup" class="call-icon-btn call-icon-btn-reject" title="Tutup telepon">✕</button>
+      </div>
+    </div>
+
+    <p id="call-error" class="call-error" hidden></p>
+  </div>
+
+  <audio id="call-remote-audio" autoplay hidden></audio>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/app.js"></script>
+<script src="js/call.js"></script>
+<script src="js/games/quiz.js"></script>
+<script src="js/games/wyr.js"></script>
+<script src="js/games/truthordare.js"></script>
+<script src="js/games/connect4.js"></script>
+<script src="js/games/guessword.js"></script>
+<script src="js/games/pictionary.js"></script>
+<script src="js/games/bombdefusal.js"></script>
+</body>
+</html>
